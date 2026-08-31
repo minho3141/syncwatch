@@ -119,7 +119,7 @@
       </div>
       <p class="hint">이거 하나면 끝. 본편 위치는 안 봐도 됨</p>
 
-      <button class="auto">타이머 자동으로 읽기 (실험적)</button>
+      <button class="auto">타이머 자동 읽기 (아직 미구현)</button>
 
       <p class="lbl">리액션 위치</p>
       <div class="off">
@@ -239,6 +239,7 @@
         "no-digits": "숫자를 못 찾았어",
         "unparsed": "숫자를 못 읽었어",
         "unverified": "읽었는데 검증에 실패했어 (" + (r && r.text) + ")",
+        "engine-missing": "자동 읽기는 아직 안 들어있어. 위 칸에 숫자를 넣어줘",
       }[r && r.error] || (r && r.error) || "실패";
       setStat(why, "bad");
     };

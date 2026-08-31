@@ -312,6 +312,9 @@ async function handleOp(msg) {
 
     // content 가 잘라 보낸 그림을 Tesseract 로 읽는다. (ocr-engine.js)
     case "ocrImage": {
+      // OCR 엔진은 아직 동봉하지 않는다. 세그먼트 LCD 시계를 기성 모델이 못 읽는 것을
+      // 확인했고(eng/letsgodigital/ssd 전부 실패), 검증되지 않은 8MB 를 넣을 이유가 없다.
+      if (typeof ocrImage !== "function") return { error: "engine-missing" };
       try {
         return await ocrImage(msg.dataUrl);
       } catch (e) {
