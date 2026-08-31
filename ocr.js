@@ -36,14 +36,13 @@
    * 타이머 판을 찾는다. 화면 네 모서리 구역에서 "밝은 덩어리"를 고른다.
    * roi 가 주어지면 (사용자가 직접 지정한 경우) 그걸 그대로 쓴다.
    */
-  function findPanel(ctx, W, H, roi) {
-    if (roi) return roi;
+  function findPanels(ctx, W, H) {
     const qw = Math.floor(W / 3), qh = Math.floor(H / 3);
     const corners = [
       { x: 0, y: 0 }, { x: W - qw, y: 0 },
       { x: 0, y: H - qh }, { x: W - qw, y: H - qh },
     ];
-    let best = null;
+    const out = [];
     for (const c of corners) {
       const img = ctx.getImageData(c.x, c.y, qw, qh).data;
       let minX = qw, minY = qh, maxX = 0, maxY = 0, n = 0;
@@ -60,10 +59,13 @@
       const w = maxX - minX, h = maxY - minY;
       // 가로로 긴 판만 후보로 본다. 시계는 항상 옆으로 길다.
       if (n > 2000 && w > 60 && h > 20 && w / h > 1.5) {
-        if (!best || n > best.n) best = { x: c.x + minX, y: c.y + minY, w, h, n };
+        out.push({ x: c.x + minX, y: c.y + minY, w, h, n });
       }
     }
-    return best;
+    // 밝기 순으로 시도하되, "제일 밝은 것"으로 확정하지 않는다.
+    // 밝은 장면이 나오면 엉뚱한 모서리가 1위가 되어 프레임마다 다른 곳을 읽는다.
+    // 실제 판정은 "숫자로 파싱되는가"로 한다.
+    return out.sort((a, b) => b.n - a.n);
   }
 
   /** 판 안에서 글자 덩어리를 세로 투영으로 나눈다. */
@@ -144,10 +146,14 @@
     const bigParts = [];
     let cur = "";
     let frac = "";
+    let afterPeriod = false;
     for (const t of tokens) {
       if (t.ch === ":") { bigParts.push(cur); cur = ""; continue; }
+      if (t.ch === ".") { afterPeriod = true; continue; }
       if (t.ch === "?") return null;
-      if (t.small) frac += t.ch; else cur += t.ch;
+      // 소수점을 만난 뒤는 전부 소수부다. 소수점이 안 잡힌 프레임을 위해
+      // 글자 크기(small)도 함께 본다 — 소수부는 대개 작게 그린다.
+      if (afterPeriod || t.small) frac += t.ch; else cur += t.ch;
     }
     if (cur) bigParts.push(cur);
     if (!bigParts.length || bigParts.some((p) => !p)) return null;
@@ -172,10 +178,21 @@
     try { ctx = grab(video); } catch (e) { return { error: "frame-blocked" }; }
 
     const W = video.videoWidth, H = video.videoHeight;
-    let panel;
-    try { panel = findPanel(ctx, W, H, roi); } catch (e) { return { error: "frame-blocked" }; }
-    if (!panel) return { error: "no-panel" };
+    let panels;
+    try { panels = roi ? [roi] : findPanels(ctx, W, H); } catch (e) { return { error: "frame-blocked" }; }
+    if (!panels.length) return { error: "no-panel" };
 
+    // 후보를 차례로 읽어보고 "시간으로 파싱되는" 첫 판을 채택한다.
+    let last = { error: "no-digits" };
+    for (const p of panels) {
+      const r = readPanel(ctx, video, W, H, p);
+      if (r && !r.error) return r;
+      last = r;
+    }
+    return last;
+  }
+
+  function readPanel(ctx, video, W, H, panel) {
     const pad = 4;
     const px = Math.max(0, panel.x - pad), py = Math.max(0, panel.y - pad);
     const pw = Math.min(W - px, panel.w + pad * 2), ph = Math.min(H - py, panel.h + pad * 2);
@@ -191,9 +208,19 @@
     if (groups.length < 3) return { error: "no-digits" };
     const maxH = Math.max(...groups.map((g) => g.h));
 
+    /**
+     * 좁은 덩어리는 숫자가 아니라 구분자다. 콜론과 소수점을 높이로 가른다.
+     *   콜론  = 점 두 개(위·아래) → 숫자 높이의 절반을 훌쩍 넘는다
+     *   소수점 = 점 한 개(아래)   → 숫자 높이의 1/3 이하, 아래쪽에 붙는다
+     * (실측 2026-08-31: 콜론 h/maxH=0.79, 소수점 h/maxH=0.31 — 둘 다 w/h≈0.18이라
+     *  폭만 보면 구별이 안 된다. 이걸 못 갈라서 05.9초를 5분 9초로 읽었다.)
+     */
     const tokens = groups.map((g) => {
-      const isColon = g.w / g.h < 0.30 && g.top > maxH * 0.2;
-      return { ch: isColon ? ":" : classify(g, dark), small: g.h < maxH * 0.6 };
+      const narrow = g.w / g.h < 0.35;
+      const hRatio = g.h / maxH;
+      if (narrow && hRatio > 0.5) return { ch: ":", small: false };
+      if (narrow && hRatio <= 0.5) return { ch: ".", small: false };
+      return { ch: classify(g, dark), small: hRatio < 0.6 };
     });
 
     const text = tokens.map((t) => t.ch).join("");
@@ -227,8 +254,10 @@
       };
     }
 
+    // 두 번째는 첫 번째가 채택한 판을 그대로 쓴다.
+    // 다시 찾게 두면 장면 밝기가 바뀌었을 때 다른 모서리를 읽어서 값이 어긋난다.
     await new Promise((r) => setTimeout(r, 1400));
-    const b = readOnce(video, roi);
+    const b = readOnce(video, a.panel);
     if (!b || b.error) return b || { error: "no-video" };
 
     const dTimer = b.seconds - a.seconds;
