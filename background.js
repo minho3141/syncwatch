@@ -294,7 +294,11 @@ async function handleOp(msg) {
      */
     case "autosync": {
       if (pair.reaction == null) return { ok: false, error: "반응 영상을 먼저 지정해줘" };
-      const r = await send(pair.reaction, { cmd: "ocr" });
+      // 사용자가 이 영상에 대해 박스를 지정해둔 적이 있으면 그걸 쓴다.
+      const rs = await stateOf(pair.reaction);
+      const rois = (await api.storage.local.get("rois")).rois || {};
+      const roi = rs ? rois[`${rs.host}|${rs.id}`] : null;
+      const r = await send(pair.reaction, { cmd: "ocr", roi });
       if (!r) return { ok: false, error: "반응 탭에 닿지 못했어" };
       if (r.error) return { ok: false, error: r.error };
       if (!r.verified) {
@@ -304,6 +308,46 @@ async function handleOp(msg) {
       await saveOffset();
       if (!pair.linked) { pair.linked = true; startLoop(); }
       return { ok: true, read: r.text, offsetMs: r.offsetMs, pair: { ...pair } };
+    }
+
+    // content 가 잘라 보낸 그림을 Tesseract 로 읽는다. (ocr-engine.js)
+    case "ocrImage": {
+      try {
+        return await ocrImage(msg.dataUrl);
+      } catch (e) {
+        return { error: "ocr-failed", detail: String(e).slice(0, 120) };
+      }
+    }
+
+    case "setRoi": {
+      if (pair.reaction == null) return { ok: false };
+      const store = (await api.storage.local.get("rois")).rois || {};
+      const r = await stateOf(pair.reaction);
+      if (r) { store[`${r.host}|${r.id}`] = msg.roi; await api.storage.local.set({ rois: store }); }
+      return { ok: true };
+    }
+
+    /**
+     * 화면에 뜬 숫자로 오프셋을 정한다.
+     *
+     *   T = 리액션 화면에 떠 있는 시간  (= 그 스트리머 기준 본편 위치)
+     *   R = 리액션 영상의 현재 재생 위치
+     *   offset = R - T
+     *
+     * 본편이 지금 몇 초인지는 알 필요가 없다. 눈대중도 필요 없다.
+     * 사람이 숫자 하나만 읽어 넣으면 나머지는 전부 계산으로 나온다.
+     */
+    case "fromShown": {
+      if (pair.reaction == null) return { ok: false, error: "리액션 영상을 먼저 골라줘" };
+      const r = await stateOf(pair.reaction);
+      if (!r || r.time == null) return { ok: false, error: "리액션 탭을 못 읽었어" };
+      if (typeof msg.shownSec !== "number" || !isFinite(msg.shownSec)) {
+        return { ok: false, error: "숫자를 못 알아듣겠어" };
+      }
+      pair.offsetMs = Math.round((r.time - msg.shownSec) * 1000);
+      await saveOffset();
+      if (!pair.linked && pair.main != null) { pair.linked = true; startLoop(); }
+      return { ok: true, reactionTime: r.time, shownSec: msg.shownSec, pair: { ...pair } };
     }
 
     case "setOffset": {

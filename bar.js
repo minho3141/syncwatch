@@ -72,10 +72,16 @@
     font: inherit; font-size: 12px; cursor: pointer;
   }
   .auto {
-    width: 100%; padding: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600;
-    background: #4b3a86; color: #e9e3ff; border: 0; border-radius: 8px; margin-bottom: 12px;
+    width: 100%; padding: 8px; cursor: pointer; font: inherit; font-size: 12px;
+    background: #2c2f37; color: #9aa0aa; border: 0; border-radius: 8px; margin: 10px 0 12px;
   }
-  .auto:hover { background: #5c48a3; }
+  .auto:hover { background: #383c46; color: #e6e7ea; }
+  .shown {
+    flex: 2; background: #1f2026; border: 1px solid #4b5570; color: #e6e7ea;
+    border-radius: 7px; padding: 9px 6px; font: inherit; font-size: 14px;
+    text-align: center; font-variant-numeric: tabular-nums; min-width: 0;
+  }
+  .applyShown { background: #2f6df6 !important; color: #fff; font-weight: 700; }
   .valin {
     flex: 2; background: #1f2026; border: 1px solid #33363f; color: #e6e7ea;
     border-radius: 7px; padding: 8px 6px; font: inherit; font-size: 12px;
@@ -106,7 +112,14 @@
 
       <button class="big">맞추기</button>
 
-      <button class="auto">타이머 읽어서 자동 맞춤</button>
+      <p class="lbl">리액션 화면에 뜬 숫자</p>
+      <div class="off">
+        <input class="shown" type="text" placeholder="03:35">
+        <button class="applyShown" style="flex:.8">적용</button>
+      </div>
+      <p class="hint">이거 하나면 끝. 본편 위치는 안 봐도 됨</p>
+
+      <button class="auto">타이머 자동으로 읽기 (실험적)</button>
 
       <p class="lbl">리액션 위치</p>
       <div class="off">
@@ -188,6 +201,31 @@
     for (const b of root.querySelectorAll(".off button[data-d]")) {
       b.onclick = async () => { await send({ op: "nudge", deltaMs: Number(b.dataset.d) }); tick(); };
     }
+
+    /** "3:35" / "03:35.08" / "215" 전부 받는다. */
+    function toSec(raw) {
+      const s = (raw || "").trim();
+      if (!s) return null;
+      const parts = s.split(":").map((p) => Number(p));
+      if (parts.some((n) => isNaN(n))) return null;
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+      if (parts.length === 1) return parts[0];
+      return null;
+    }
+
+    const applyShown = async () => {
+      const sec = toSec(q(".shown").value);
+      if (sec == null) return setStat("숫자 형식이 이상해 (예: 3:35)", "bad");
+      const s0 = await send({ op: "status" });
+      if (!s0 || s0.pair.reaction == null) return setStat("먼저 리액션 탭을 골라줘", "bad");
+      const r = await send({ op: "fromShown", shownSec: sec });
+      if (!r || !r.ok) return setStat((r && r.error) || "실패", "bad");
+      q(".shown").value = "";
+      tick();
+    };
+    q(".applyShown").onclick = applyShown;
+    q(".shown").addEventListener("keydown", (e) => { if (e.key === "Enter") applyShown(); });
 
     q(".auto").onclick = async () => {
       setStat("타이머 읽는 중…", "wait");
