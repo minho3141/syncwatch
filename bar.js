@@ -94,6 +94,10 @@
   }
   .more:hover { color: #c9ced6; }
   .extra.hidden { display: none; }
+  .offnow {
+    margin: 10px 0 0; text-align: center; font-size: 13px; font-weight: 700;
+    color: #c9ced6; font-variant-numeric: tabular-nums;
+  }
 
   .vol { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
   .vol span { width: 30px; font-size: 11px; color: #9aa0aa; }
@@ -125,7 +129,8 @@
       </div>
       <p class="hint">이거 하나면 끝. 본편 위치는 안 봐도 됨</p>
 
-      <div class="off" style="margin-top:8px">
+      <p class="offnow">오프셋 —</p>
+      <div class="off" style="margin-top:6px">
         <button data-d="-1000">−1s</button>
         <button data-d="-200">−.2</button>
         <button data-d="200">+.2</button>
@@ -358,6 +363,16 @@
     const big = root.querySelector(".big");
     big.textContent = s.pair.linked ? "풀기" : "맞추기";
     big.classList.toggle("on", s.pair.linked);
+    const now = root.querySelector(".offnow");
+    if (now) {
+      const sec = s.pair.offsetMs / 1000;
+      const sign = sec < 0 ? "−" : "+";
+      const a = Math.abs(sec);
+      now.textContent = "오프셋 " + sign + (a >= 60
+        ? `${Math.floor(a / 60)}:${(a % 60).toFixed(1).padStart(4, "0")}`
+        : `${a.toFixed(2)}s`);
+    }
+
     const el = root.querySelector(".valin");
     if (el && document.activeElement !== host) {
       const sec = s.pair.offsetMs / 1000;

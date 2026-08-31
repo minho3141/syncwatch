@@ -189,4 +189,22 @@
 
   // 영상이 있는 프레임만 스스로 등록한다.
   if (adapter.ok()) report("hello");
+
+  /**
+   * 영상이 있는 페이지는 background 로 포트를 하나 열어둔다.
+   * 이벤트 페이지가 정지되지 않게 붙잡는 용도다. 열려 있는 포트가 없으면
+   * Firefox 가 30초 뒤 background 를 재워버려서 동기화가 멈춘다.
+   */
+  function keepAlive() {
+    if (!adapter.ok()) return;
+    try {
+      const port = api.runtime.connect({ name: "syncwatch-keepalive" });
+      port.onDisconnect.addListener(() => setTimeout(keepAlive, 1000));
+    } catch (e) {
+      setTimeout(keepAlive, 5000);
+    }
+  }
+  keepAlive();
+  // 영상이 뒤늦게 생기는 사이트를 위해 한 번 더 시도한다.
+  setTimeout(keepAlive, 4000);
 })();

@@ -171,6 +171,23 @@ async function tick() {
   await send(pair.reaction, { cmd: "seek", time: target });
 }
 
+/**
+ * 백그라운드 페이지가 잠드는 것을 막는다.
+ *
+ * MV3 이벤트 페이지는 30초쯤 놀면 Firefox 가 정지시킨다. setInterval 은 그것을
+ * 막아주지 못한다. 정지되면 동기화 루프가 죽고, 본편에서 재생을 눌러도 리액션에
+ * 신호가 가지 않는다. 탭을 바꾸면 content script 보고가 페이지를 깨워서 그때서야
+ * 움직인다 — 실제 증상이 정확히 이랬다.
+ *
+ * 열려 있는 포트가 하나라도 있으면 이벤트 페이지는 정지되지 않는다.
+ */
+const livePorts = new Set();
+api.runtime.onConnect.addListener((port) => {
+  if (port.name !== "syncwatch-keepalive") return;
+  livePorts.add(port);
+  port.onDisconnect.addListener(() => livePorts.delete(port));
+});
+
 function startLoop() {
   if (syncTimer) return;
   syncTimer = setInterval(tick, 700);
