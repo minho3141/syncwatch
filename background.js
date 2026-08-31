@@ -95,6 +95,19 @@ async function saveOffset() {
   await api.storage.local.set({ offsets: store });
 }
 
+/**
+ * 오프셋을 바꾼 즉시 리액션을 제자리로 옮긴다.
+ * 숫자만 저장하고 영상을 안 움직이면, 사용자는 조정이 먹었는지 알 수가 없고
+ * 재생을 누르는 순간에야 어긋난 것을 알게 된다.
+ */
+async function applyOffsetNow() {
+  if (pair.main == null || pair.reaction == null) return;
+  const m = await stateOf(pair.main);
+  if (!m || m.time == null) return;
+  suppressUntil = Date.now() + 900;
+  await send(pair.reaction, { cmd: "seek", time: m.time + pair.offsetMs / 1000 });
+}
+
 async function loadOffset() {
   const [m, r] = await Promise.all([stateOf(pair.main), stateOf(pair.reaction)]);
   const key = pairKey(m, r);
@@ -150,7 +163,24 @@ async function tick() {
     }
     return;
   }
-  if (m.paused) { await restoreRate(); return; } // 멈춰 있으면 보정하지 않는다
+  /**
+   * 둘 다 멈춰 있어도 위치는 맞춰야 한다.
+   *
+   * 예전에는 여기서 그냥 나갔다. 그래서 정지 상태로 오프셋을 조정하면 화면이
+   * 전혀 움직이지 않고, 재생을 누르는 순간 어긋난 채로 시작했다.
+   * (실측 2026-08-31: 본편 61.00 / 리액션 4218.43 / 오프셋 3327.74 → 830초
+   *  어긋난 채 정지. 사용자는 조정이 먹은 줄 알고 재생을 누른다.)
+   * 배속 보정은 흐르는 중에만 의미가 있으므로 정지 중에는 seek 으로만 맞춘다.
+   */
+  if (m.paused) {
+    await restoreRate();
+    const want = m.time + pair.offsetMs / 1000;
+    if (Math.abs(r.time - want) > DEAD_ZONE && Date.now() > suppressUntil) {
+      suppressUntil = Date.now() + 800;
+      await send(pair.reaction, { cmd: "seek", time: want });
+    }
+    return;
+  }
 
   const target = m.time + pair.offsetMs / 1000;
   const diff = r.time - target; // 양수면 리액션이 앞서 있다
@@ -414,6 +444,7 @@ async function handleOp(msg) {
         ? shownAnchor.time : r.time;
       shownAnchor = null;
       pair.offsetMs = Math.round((anchored - msg.shownSec) * 1000);
+      await applyOffsetNow();
       await saveOffset();
       if (!pair.linked && pair.main != null) { pair.linked = true; startLoop(); }
       return { ok: true, reactionTime: r.time, shownSec: msg.shownSec, pair: { ...pair } };
@@ -421,6 +452,7 @@ async function handleOp(msg) {
 
     case "setOffset": {
       pair.offsetMs = msg.offsetMs;
+      await applyOffsetNow();
       await saveOffset();
       return { pair: { ...pair } };
     }
