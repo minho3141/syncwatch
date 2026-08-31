@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "SyncWatch",
+  "version": "0.6.0",
+  "description": "아무 영상 탭 두 개를 하나의 타임라인으로 묶는다. 본편 + 리액션 동시시청용.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "syncwatch@minho3141.github.io",
+      "strict_min_version": "115.0",
+      "update_url": "https://raw.githubusercontent.com/minho3141/syncwatch/main/updates.json"
+    }
+  },
+
+  "permissions": ["tabs", "storage"],
+  "host_permissions": ["<all_urls>"],
+
+  "background": {
+    "scripts": ["background.js"]
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "all_frames": true,
+      "match_about_blank": false,
+      "run_at": "document_idle",
+      "js": ["content.js", "ocr.js", "bar.js"]
+    }
+  ],
+
+  "action": {
+    "default_title": "SyncWatch — 조작바 켜기/끄기"
+  },
+
+  "commands": {
+    "toggle-bar": {
+      "suggested_key": { "default": "Alt+Shift+W" },
+      "description": "화면 조작바 켜기/끄기"
+    },
+    "toggle-play": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "본편/리액션 동시 재생·정지"
+    },
+    "offset-back": {
+      "suggested_key": { "default": "Alt+Shift+Comma" },
+      "description": "리액션을 0.5초 당기기"
+    },
+    "offset-forward": {
+      "suggested_key": { "default": "Alt+Shift+Period" },
+      "description": "리액션을 0.5초 밀기"
+    }
+  }
+}

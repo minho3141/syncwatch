@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    width: 320px; margin: 0; padding: 14px;
+    font: 14px/1.5 system-ui, "Noto Sans KR", sans-serif;
+    background: #17181c; color: #e6e7ea;
+  }
+
+  #big {
+    width: 100%; padding: 16px; font-size: 17px; font-weight: 700;
+    background: #2f6df6; color: #fff; border: 0; border-radius: 10px; cursor: pointer;
+  }
+  #big:hover { background: #4880ff; }
+  #big.on { background: #1d7a3d; }
+
+  #msg { text-align: center; margin: 10px 0 0; font-size: 13px; color: #9aa0aa; }
+  #msg.good { color: #4ade80; }
+  #msg.bad  { color: #fbbf24; }
+
+  .steps { color: #7f8794; font-size: 12px; margin: 0 0 12px; }
+  .steps b { color: #c9ced6; }
+
+  h2 { font-size: 11px; margin: 16px 0 6px; color: #6f7681; font-weight: 600; }
+
+  .nudge { display: flex; gap: 6px; margin-top: 4px; }
+  .nudge button {
+    flex: 1; padding: 10px 4px; font-size: 12px; line-height: 1.3;
+    background: #2c2f37; color: #e6e7ea; border: 0; border-radius: 8px; cursor: pointer;
+  }
+  .nudge button:hover { background: #383c46; }
+  .nudge small { display: block; color: #7f8794; font-size: 10px; }
+
+  .row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .row label { width: 34px; color: #9aa0aa; font-size: 12px; }
+  input[type=range] { flex: 1; }
+
+  .tip {
+    background: #1f2026; border-radius: 8px; padding: 9px 10px;
+    font-size: 12px; color: #9aa0aa; margin-top: 6px;
+  }
+  .tip b { color: #c9ced6; }
+
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: #6f7681; font-size: 12px; }
+  details .inner { margin-top: 8px; }
+  button.sm { background:#2c2f37; color:#e6e7ea; border:0; border-radius:5px; padding:4px 8px; cursor:pointer; font:inherit; font-size:12px; }
+  .tab { display:flex; align-items:center; gap:6px; padding:5px 7px; border-radius:6px; background:#1f2026; margin-bottom:4px; font-size:12px; }
+  .tab .name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tab button.on { background:#2f6df6; color:#fff; }
+  textarea { width:100%; height:48px; box-sizing:border-box; background:#1f2026; border:1px solid #33363f; color:#e6e7ea; border-radius:5px; font-size:11px; }
+  #offset { width: 80px; background:#1f2026; border:1px solid #33363f; color:#e6e7ea; border-radius:5px; padding:3px 5px; font:inherit; font-size:12px; }
+</style>
+</head>
+<body>
+
+<p class="steps">
+  <b>1.</b> 영상 두 개를 각각 <b>재생</b>해<br>
+  <b>2.</b> 본편 탭에서 아래 버튼을 눌러
+</p>
+
+<button id="big">맞추기</button>
+<p id="msg">—</p>
+
+<h2>안 맞으면 눌러</h2>
+<div class="nudge">
+  <button id="back">리액션이 빨라<small>0.5초 늦춤</small></button>
+  <button id="fwd">리액션이 느려<small>0.5초 당김</small></button>
+</div>
+
+<h2>소리</h2>
+<div class="row"><label>본편</label><input type="range" id="volMain" min="0" max="1" step="0.01" value="1"></div>
+<div class="row"><label>반응</label><input type="range" id="volReact" min="0" max="1" step="0.01" value="1"></div>
+
+<h2>같이 보려면</h2>
+<div class="tip">
+  반응 영상 탭에서 <b>재생</b> → <b>본편 탭으로 전환</b>하면
+  반응 영상이 <b>떠 있는 작은 창</b>으로 튀어나와.<br>
+  그 상태로 본편을 전체화면 하면 돼.
+</div>
+
+<details>
+  <summary>직접 고르기 · 오프셋 공유</summary>
+  <div class="inner">
+    <div id="tabs"></div>
+    <div class="row" style="margin-top:8px">
+      <label>오프셋</label><input type="number" id="offset" step="100"><span style="color:#7f8794;font-size:11px">ms</span>
+      <button class="sm" id="unlink">풀기</button>
+    </div>
+    <textarea id="profile" placeholder="오프셋 JSON"></textarea>
+    <div class="row" style="margin-top:4px">
+      <button class="sm" id="export" style="flex:1">내보내기</button>
+      <button class="sm" id="import" style="flex:1">불러오기</button>
+    </div>
+  </div>
+</details>
+
+<script src="popup.js"></script>
+</body>
+</html>
