@@ -98,6 +98,11 @@
     margin: 10px 0 0; text-align: center; font-size: 13px; font-weight: 700;
     color: #c9ced6; font-variant-numeric: tabular-nums;
   }
+  /* 원시 수치. 이게 없으면 어디서 어긋나는지 아무도 못 본다. */
+  .raw {
+    margin: 3px 0 0; text-align: center; font-size: 10px; color: #7f8794;
+    font-variant-numeric: tabular-nums; user-select: text; cursor: text;
+  }
 
   .vol { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
   .vol span { width: 30px; font-size: 11px; color: #9aa0aa; }
@@ -130,6 +135,7 @@
       <p class="hint">이거 하나면 끝. 본편 위치는 안 봐도 됨</p>
 
       <p class="offnow">오프셋 —</p>
+      <p class="raw">—</p>
       <div class="off" style="margin-top:6px">
         <button data-d="-1000">−1s</button>
         <button data-d="-200">−.2</button>
@@ -378,6 +384,15 @@
       now.textContent = "오프셋 " + sign + (a >= 60
         ? `${Math.floor(a / 60)}:${(a % 60).toFixed(1).padStart(4, "0")}`
         : `${a.toFixed(2)}s`);
+    }
+
+    const raw = root.querySelector(".raw");
+    if (raw) {
+      const f = (x) => (x == null ? "?" : x.toFixed(2));
+      const m = s.main, r = s.reaction;
+      raw.textContent =
+        `본편 ${f(m && m.time)} · 리액션 ${f(r && r.time)} · 차이 ${f(m && r ? r.time - m.time : null)}` +
+        (m && r ? `  [${m.paused ? "정지" : "재생"}/${r.paused ? "정지" : "재생"} ×${(r.rate || 1).toFixed(2)}]` : "");
     }
 
     const el = root.querySelector(".valin");
