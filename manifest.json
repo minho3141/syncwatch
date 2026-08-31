@@ -1,14 +1,17 @@
 {
   "manifest_version": 3,
   "name": "SyncWatch",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "아무 영상 탭 두 개를 하나의 타임라인으로 묶는다. 본편 + 리액션 동시시청용.",
 
   "browser_specific_settings": {
     "gecko": {
       "id": "syncwatch@minho3141.github.io",
       "strict_min_version": "115.0",
-      "update_url": "https://raw.githubusercontent.com/minho3141/syncwatch/main/updates.json"
+      "update_url": "https://raw.githubusercontent.com/minho3141/syncwatch/main/updates.json",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
 
