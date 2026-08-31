@@ -214,6 +214,18 @@ api.runtime.onMessage.addListener((msg, sender) => {
         send(pair.main, { cmd: "pause" });
       }
       if (msg.evt === "play")  { suppressUntil = Date.now() + 500; send(pair.main, { cmd: "play" }); }
+
+      /**
+       * 리액션 쪽을 직접 옮기면 본편이 따라온다.  main = reaction - offset
+       *
+       * 이게 없으면 보정 루프가 리액션을 본편 위치로 도로 끌어당겨서, 사용자가 옮긴 것을
+       * 되돌려버린다. 따라오는 게 아니라 싸우는 꼴이 된다.
+       * 어느 쪽을 만지든 나머지가 따라오는 것이 맞다.
+       */
+      if (msg.evt === "seeked") {
+        suppressUntil = Date.now() + 800;
+        send(pair.main, { cmd: "seek", time: msg.state.time - pair.offsetMs / 1000 });
+      }
     }
   }
 });
