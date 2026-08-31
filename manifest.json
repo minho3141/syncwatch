@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SyncWatch",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "아무 영상 탭 두 개를 하나의 타임라인으로 묶는다. 본편 + 리액션 동시시청용.",
 
   "browser_specific_settings": {
@@ -15,7 +15,7 @@
     }
   },
 
-  "permissions": ["tabs", "storage"],
+  "permissions": ["tabs", "storage", "webNavigation"],
   "host_permissions": ["<all_urls>"],
 
   "background": {

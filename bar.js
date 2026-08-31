@@ -288,7 +288,8 @@
       el.dataset.sig = sig;
       el.innerHTML = '<option value="">— 고르기 —</option>' +
         res.tabs.map((t) => {
-          const name = (t.title || t.host).replace(/ - YouTube$/, "").slice(0, 42);
+          // iframe 안의 영상이면 t.title 은 플레이어 프레임 제목이라 쓸모없다. 탭 제목이 맞다.
+          const name = (t.tabTitle || t.title || t.host).replace(/ - YouTube$/, "").slice(0, 42);
           return `<option value="${t.tabId}">${name.replace(/</g, "&lt;")}</option>`;
         }).join("");
       el.value = pair[role] == null ? "" : String(pair[role]);

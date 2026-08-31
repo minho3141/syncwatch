@@ -30,13 +30,47 @@ let suppressUntil = 0; // 우리가 건 seek 이 되돌아와 무한루프 도�
 
 // ── 유틸 ────────────────────────────────────────────────────────────────────
 
+/**
+ * 어느 프레임에 영상이 있는지 기억한다.  tabId -> frameId
+ *
+ * 이게 없으면 iframe 플레이어를 쓰는 사이트가 통째로 안 잡힌다.
+ * tabs.sendMessage 에 frameId 를 안 주면 모든 프레임에 뿌리고 "먼저 답한 것"을 받는데,
+ * 최상위 프레임은 영상이 없으니 "없음"이라고 즉시 답해서 항상 그쪽이 이긴다.
+ * (실측 2026-08-31: tvwiki 는 player.bunny-frame.online iframe 안에 영상이 있다.)
+ */
+const videoFrames = new Map();
+
 function send(tabId, msg) {
-  return api.tabs.sendMessage(tabId, { ns: "syncwatch", ...msg }).catch(() => null);
+  if (tabId == null) return Promise.resolve(null);
+  const opts = videoFrames.has(tabId) ? { frameId: videoFrames.get(tabId) } : undefined;
+  return api.tabs.sendMessage(tabId, { ns: "syncwatch", ...msg }, opts).catch(() => null);
 }
 
 async function stateOf(tabId) {
   if (tabId == null) return null;
   return send(tabId, { cmd: "state" });
+}
+
+/** 탭의 모든 프레임에 물어서 영상이 있는 프레임을 찾는다. 가장 긴 영상을 고른다. */
+async function findVideoFrame(tabId) {
+  let frameIds = [0];
+  try {
+    const frames = await api.webNavigation.getAllFrames({ tabId });
+    if (frames && frames.length) frameIds = frames.map((f) => f.frameId);
+  } catch (e) { /* 권한/탭 문제 — 최상위만 본다 */ }
+
+  const hits = [];
+  await Promise.all(frameIds.map(async (frameId) => {
+    const s = await api.tabs
+      .sendMessage(tabId, { ns: "syncwatch", cmd: "state" }, { frameId })
+      .catch(() => null);
+    if (s && s.hasVideo) hits.push({ frameId, s });
+  }));
+  if (!hits.length) { videoFrames.delete(tabId); return null; }
+
+  hits.sort((a, b) => (b.s.duration || 0) - (a.s.duration || 0));
+  videoFrames.set(tabId, hits[0].frameId);
+  return hits[0].s;
 }
 
 function pairKey(a, b) {
@@ -179,7 +213,7 @@ async function handleOp(msg) {
       const out = [];
       await Promise.all(tabs.map(async (t) => {
         if (!/^https?:|^file:/.test(t.url || "")) return;
-        const s = await stateOf(t.id);
+        const s = await findVideoFrame(t.id);
         if (s && s.hasVideo) out.push({ ...s, tabId: t.id, tabTitle: t.title });
       }));
       return { tabs: out, pair: { ...pair } };
@@ -201,7 +235,7 @@ async function handleOp(msg) {
       const vids = [];
       await Promise.all(tabs.map(async (t) => {
         if (!/^https?:|^file:/.test(t.url || "")) return;
-        const s = await stateOf(t.id);
+        const s = await findVideoFrame(t.id);
         if (s && s.hasVideo) vids.push({ ...s, tabId: t.id, active: t.active });
       }));
 
