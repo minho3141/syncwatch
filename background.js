@@ -131,15 +131,25 @@ async function tick() {
   const [m, r] = await Promise.all([stateOf(pair.main), stateOf(pair.reaction)]);
   if (!m || !r || m.time == null || r.time == null) return;
 
+  /**
+   * 배속은 보정 중에만 1이 아니어야 한다.
+   * 예전에는 정지 상태에서 그냥 빠져나가서, 보정 도중 멈추면 1.07 같은 값이 굳었다.
+   * 그대로 다시 재생하면 7% 빠르게 돌아 계속 어긋난다. 아래에서 항상 되돌린다.
+   */
+  const restoreRate = async () => {
+    if (Math.abs(r.rate - m.rate) > 0.001) await send(pair.reaction, { cmd: "rate", rate: m.rate });
+  };
+
   // 재생/정지 상태를 본편에 맞춘다.
   if (m.paused !== r.paused) {
+    await restoreRate();
     if (Date.now() > suppressUntil) {
       suppressUntil = Date.now() + 500;
       await send(pair.reaction, { cmd: m.paused ? "pause" : "play" });
     }
     return;
   }
-  if (m.paused) return; // 둘 다 멈춰 있으면 드리프트 볼 필요 없다
+  if (m.paused) { await restoreRate(); return; } // 멈춰 있으면 보정하지 않는다
 
   const target = m.time + pair.offsetMs / 1000;
   const diff = r.time - target; // 양수면 리액션이 앞서 있다
@@ -197,7 +207,12 @@ api.runtime.onMessage.addListener((msg, sender) => {
 
     // 리액션 쪽을 직접 정지하면 본편도 세운다. (한쪽만 멈추는 게 제일 짜증난다)
     if (tabId === pair.reaction && Date.now() > suppressUntil) {
-      if (msg.evt === "pause") { suppressUntil = Date.now() + 500; send(pair.main, { cmd: "pause" }); }
+      // 멈추는 순간 배속을 1로 되돌린다. 보정 도중 멈추면 그 값이 그대로 굳는다.
+      if (msg.evt === "pause") {
+        suppressUntil = Date.now() + 500;
+        send(pair.reaction, { cmd: "rate", rate: 1 });
+        send(pair.main, { cmd: "pause" });
+      }
       if (msg.evt === "play")  { suppressUntil = Date.now() + 500; send(pair.main, { cmd: "play" }); }
     }
   }

@@ -88,6 +88,12 @@
     text-align: center; font-variant-numeric: tabular-nums; min-width: 0;
   }
   .hint { font-size: 10px; color: #6f7681; text-align: center; margin-top: 4px; }
+  .more {
+    width: 100%; padding: 6px; margin-top: 10px; cursor: pointer;
+    background: none; border: 0; color: #6f7681; font: inherit; font-size: 11px;
+  }
+  .more:hover { color: #c9ced6; }
+  .extra.hidden { display: none; }
 
   .vol { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
   .vol span { width: 30px; font-size: 11px; color: #9aa0aa; }
@@ -119,30 +125,34 @@
       </div>
       <p class="hint">이거 하나면 끝. 본편 위치는 안 봐도 됨</p>
 
-      <button class="auto">타이머 자동 읽기 (아직 미구현)</button>
-
-      <p class="lbl">리액션 위치</p>
-      <div class="off">
-        <button data-d="-60000">−1분</button>
-        <button data-d="-10000">−10s</button>
+      <div class="off" style="margin-top:8px">
         <button data-d="-1000">−1s</button>
         <button data-d="-200">−.2</button>
-      </div>
-      <div class="off" style="margin-top:4px">
-        <button data-d="60000">+1분</button>
-        <button data-d="10000">+10s</button>
-        <button data-d="1000">+1s</button>
         <button data-d="200">+.2</button>
-      </div>
-      <div class="off" style="margin-top:5px">
-        <input class="valin" type="text" placeholder="0:00.0">
-        <button class="setv" style="flex:.7">적용</button>
+        <button data-d="1000">+1s</button>
       </div>
       <p class="hint">− 리액션이 빠를 때 &nbsp;·&nbsp; + 느릴 때</p>
 
-      <p class="lbl" style="margin-top:12px">소리</p>
-      <div class="vol"><span>본편</span><input class="vm" type="range" min="0" max="1" step="0.01" value="1"></div>
-      <div class="vol"><span>반응</span><input class="vr" type="range" min="0" max="1" step="0.01" value="1"></div>
+      <button class="more">＋ 더보기</button>
+
+      <div class="extra hidden">
+        <div class="off">
+          <button data-d="-60000">−1분</button>
+          <button data-d="-10000">−10s</button>
+          <button data-d="10000">+10s</button>
+          <button data-d="60000">+1분</button>
+        </div>
+        <div class="off" style="margin-top:5px">
+          <input class="valin" type="text" placeholder="오프셋 0:00.0">
+          <button class="setv" style="flex:.7">적용</button>
+        </div>
+
+        <p class="lbl" style="margin-top:10px">소리</p>
+        <div class="vol"><span>본편</span><input class="vm" type="range" min="0" max="1" step="0.01" value="1"></div>
+        <div class="vol"><span>반응</span><input class="vr" type="range" min="0" max="1" step="0.01" value="1"></div>
+
+        <button class="auto">타이머 자동 읽기 (아직 미구현)</button>
+      </div>
     </div>
   </div>`;
 
@@ -262,6 +272,12 @@
 
     q(".vm").oninput = (e) => send({ op: "volume", role: "main", value: Number(e.target.value) });
     q(".vr").oninput = (e) => send({ op: "volume", role: "reaction", value: Number(e.target.value) });
+
+    q(".more").onclick = () => {
+      const ex = q(".extra");
+      const open = ex.classList.toggle("hidden") === false;
+      q(".more").textContent = open ? "－ 접기" : "＋ 더보기";
+    };
 
     q(".min").onclick = () => {
       collapsed = !collapsed;
