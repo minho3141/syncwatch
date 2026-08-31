@@ -3,8 +3,8 @@
     "syncwatch@minho3141.github.io": {
       "updates": [
         {
-          "version": "0.11.0",
-          "update_link": "https://github.com/minho3141/syncwatch/releases/download/v0.11.0/syncwatch-0.11.0.xpi",
+          "version": "0.14.0",
+          "update_link": "https://github.com/minho3141/syncwatch/releases/download/v0.14.0/syncwatch-0.14.0.xpi",
           "browser_specific_settings": {
             "gecko": { "strict_min_version": "115.0" }
           }
