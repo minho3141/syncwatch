@@ -1,0 +1,15 @@
+{
+  "addons": {
+    "syncwatch@minho3141.github.io": {
+      "updates": [
+        {
+          "version": "0.6.1",
+          "update_link": "https://github.com/minho3141/syncwatch/releases/download/v0.6.1/syncwatch-0.6.1.xpi",
+          "browser_specific_settings": {
+            "gecko": { "strict_min_version": "115.0" }
+          }
+        }
+      ]
+    }
+  }
+}
