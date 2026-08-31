@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>SyncWatch 상태</title>
+<style>
+  :root { color-scheme: dark; }
+  body { background:#17181c; color:#e6e7ea; font:13px/1.6 system-ui,"Noto Sans KR",sans-serif; padding:14px; margin:0; }
+  pre { background:#1f2026; padding:10px; border-radius:8px; white-space:pre-wrap; word-break:break-all; font-size:12px; }
+  button { background:#2c2f37; color:#e6e7ea; border:0; border-radius:6px; padding:6px 10px; margin:2px; cursor:pointer; font:inherit; }
+  h3 { margin:14px 0 6px; font-size:12px; color:#9aa0aa; }
+</style>
+</head>
+<body>
+<h3>상태</h3>
+<pre id="out">읽는 중…</pre>
+<div>
+  <button data-op="list">탭 목록</button>
+  <button data-op="status">상태 갱신</button>
+</div>
+<script src="panel.js"></script>
+</body>
+</html>
