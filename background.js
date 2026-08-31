@@ -27,6 +27,7 @@ const seen = new Map(); // tabId -> state
 
 let syncTimer = null;
 let suppressUntil = 0; // 우리가 건 seek 이 되돌아와 무한루프 도는 것 방지
+let shownAnchor = null; // 숫자칸에 들어간 순간의 리액션 위치 { time, at }
 
 // ── 유틸 ────────────────────────────────────────────────────────────────────
 
@@ -384,6 +385,23 @@ async function handleOp(msg) {
      * 본편이 지금 몇 초인지는 알 필요가 없다. 눈대중도 필요 없다.
      * 사람이 숫자 하나만 읽어 넣으면 나머지는 전부 계산으로 나온다.
      */
+    /**
+     * 숫자칸에 들어가는 순간 리액션을 세우고 그 시점의 R 을 붙잡아 둔다.
+     *
+     * 이게 없으면 화면을 읽고 타이핑하는 동안 R 이 계속 흘러서, offset = R - T 가
+     * 그 시간만큼 항상 크게 나온다. 사람마다 타이핑 시간이 비슷하니 매번 같은
+     * 크기로 어긋난다 — 실제 증상이 '계속 같은 싱크 격차'였다.
+     */
+    case "armShown": {
+      if (pair.reaction == null) return { ok: false, error: "리액션 영상을 먼저 골라줘" };
+      await send(pair.reaction, { cmd: "pause" });
+      await send(pair.main, { cmd: "pause" });
+      const r = await stateOf(pair.reaction);
+      if (!r || r.time == null) return { ok: false, error: "리액션 탭을 못 읽었어" };
+      shownAnchor = { time: r.time, at: Date.now() };
+      return { ok: true, time: r.time };
+    }
+
     case "fromShown": {
       if (pair.reaction == null) return { ok: false, error: "리액션 영상을 먼저 골라줘" };
       const r = await stateOf(pair.reaction);
@@ -391,7 +409,11 @@ async function handleOp(msg) {
       if (typeof msg.shownSec !== "number" || !isFinite(msg.shownSec)) {
         return { ok: false, error: "숫자를 못 알아듣겠어" };
       }
-      pair.offsetMs = Math.round((r.time - msg.shownSec) * 1000);
+      // 붙잡아 둔 R 이 있으면 그것을 쓴다. 없거나 오래됐으면 현재값.
+      const anchored = shownAnchor && Date.now() - shownAnchor.at < 10 * 60 * 1000
+        ? shownAnchor.time : r.time;
+      shownAnchor = null;
+      pair.offsetMs = Math.round((anchored - msg.shownSec) * 1000);
       await saveOffset();
       if (!pair.linked && pair.main != null) { pair.linked = true; startLoop(); }
       return { ok: true, reactionTime: r.time, shownSec: msg.shownSec, pair: { ...pair } };

@@ -242,6 +242,13 @@
     q(".applyShown").onclick = applyShown;
     q(".shown").addEventListener("keydown", (e) => { if (e.key === "Enter") applyShown(); });
 
+    // 칸에 들어가는 순간 양쪽을 세우고 그 시점의 리액션 위치를 붙잡는다.
+    // 그래야 읽고 타이핑하는 시간만큼 오프셋이 밀리지 않는다.
+    q(".shown").addEventListener("focus", async () => {
+      const r = await send({ op: "armShown" });
+      setStat(r && r.ok ? "정지함 — 화면의 숫자를 입력해" : ((r && r.error) || "실패"), r && r.ok ? "wait" : "bad");
+    });
+
     q(".auto").onclick = async () => {
       setStat("타이머 읽는 중…", "wait");
       const s = await send({ op: "status" });
